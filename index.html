@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyCardamomAuction - Live Spice E-Auction Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); }
+    .pulse-timer { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-slate-800 bg-slate-950 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🌱</span>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide text-emerald-400">MyCardamomAuction</h1>
+        <p class="text-xs text-slate-400">Spices Board Compliant | Dual-Location System</p>
+      </div>
+    </div>
+
+    <!-- LOCATION SELECTOR -->
+    <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+      <button id="locPuttady" onclick="switchLocation('Puttady')" class="px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition">
+        📍 Puttady (PRIMARY)
+      </button>
+      <button id="locBodi" onclick="switchLocation('Bodinayakanur')" class="px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition">
+        📍 Bodinayakanur (SECONDARY)
+      </button>
+    </div>
+
+    <!-- USER STATUS -->
+    <div id="userBadge" class="hidden items-center gap-3 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700">
+      <span id="userRoleBadge" class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Trader</span>
+      <span id="userSeatBadge" class="text-xs font-semibold text-amber-400">🪑 T-12</span>
+      <span id="userNameBadge" class="text-xs text-slate-300">trader@puttady</span>
+      <button onclick="logout()" class="text-xs text-red-400 hover:underline ml-2">Logout</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+    
+    <!-- LOGIN SCREEN -->
+    <section id="loginScreen" class="max-w-md mx-auto my-12 bg-slate-950 border border-slate-800 p-8 rounded-2xl shadow-2xl">
+      <h2 class="text-2xl font-bold mb-2 text-center text-white">System Login</h2>
+      <p class="text-xs text-slate-400 text-center mb-6">Enter your credentials or click a demo role below</p>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Username / Email</label>
+          <input type="text" id="loginUsername" required value="trader@puttady" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+          <input type="password" id="loginPassword" required value="1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+          <p class="text-[10px] text-emerald-400 mt-1">💡 Default universal password: <code class="bg-slate-800 px-1 py-0.5 rounded">1234</code></p>
+        </div>
+
+        <!-- SEAT SELECTOR FOR TRADERS/DEALERS -->
+        <div id="seatSelectorGroup">
+          <label class="block text-xs font-medium text-amber-400 mb-1">Select Hall Seat / Table Number</label>
+          <select id="loginSeat" class="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+            <!-- Populated dynamically T-01 to T-60 -->
+          </select>
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+          Sign In to Dashboard
+        </button>
+      </form>
+
+      <div class="mt-8 border-t border-slate-800 pt-6">
+        <p class="text-xs text-slate-400 mb-3 font-semibold text-center">Quick Demo Access (1-Click Login)</p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button onclick="quickLogin('admin@puttady', 'Admin')" class="bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700">🔑 Admin</button>
+          <button onclick="quickLogin('auctioneer@puttady', 'Auctioneer')" class="bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700">🎙️ Auctioneer</button>
+          <button onclick="quickLogin('trader@puttady', 'Trader')" class="bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700">💼 Trader</button>
+          <button onclick="quickLogin('dealer@puttady', 'Dealer')" class="bg-slate-800 hover:bg-slate-700 p-2 rounded text-left border border-slate-700">🏪 Dealer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE AUCTION DASHBOARD -->
+    <section id="auctionDashboard" class="hidden space-y-6">
+      
+      <!-- TOP CONTROL & TIMER BAR -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- CURRENT LOT INFO -->
+        <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Active Lot</span>
+            <h3 id="lotNumber" class="text-2xl font-black text-white mt-1">LOT #104 - Premium Alleppey Green</h3>
+            <p class="text-xs text-slate-400 mt-1">Quantity: 250 Kg | Grade: AGEB | Moisture: 10.5%</p>
+          </div>
+          <div class="mt-4 flex gap-4 text-xs text-slate-300 border-t border-slate-800/80 pt-3">
+            <div>Base Price: <span class="font-bold text-white">₹2,100/kg</span></div>
+            <div>Pooling: <span class="font-bold text-emerald-400">25% SB Verified</span></div>
+          </div>
+        </div>
+
+        <!-- LIVE TIMER -->
+        <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col items-center justify-center text-center">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Bid Extension Timer</span>
+          <div id="bidTimer" class="text-5xl font-black text-amber-400 my-2 font-mono">06s</div>
+          <span class="text-[11px] text-slate-500">Resets to 6 seconds automatically on every new bid</span>
+        </div>
+
+        <!-- HIGHEST BIDDER -->
+        <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Current Highest Bid</span>
+            <div id="highestBidDisplay" class="text-3xl font-black text-emerald-400 mt-1">₹ 2,450 / kg</div>
+          </div>
+          <div id="highestBidderInfo" class="mt-2 text-xs text-slate-300 border-t border-slate-800/80 pt-3 flex justify-between items-center">
+            <span>Holder: <strong class="text-white">Kerala Spice Traders</strong></span>
+            <span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">🪑 Table T-15</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BIDDING INTERFACE & LIVE STREAM LOG -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- BIDDING CONTROLS (TRADER / DEALER) -->
+        <div class="bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>⚡</span> Place Bids
+          </h3>
+          <p class="text-xs text-slate-400">Click quick increment or enter custom amount above current highest bid.</p>
+          
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="incrementBid(5)" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-3 rounded-lg border border-slate-700 text-sm transition">+ ₹5</button>
+            <button onclick="incrementBid(10)" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-3 rounded-lg border border-slate-700 text-sm transition">+ ₹10</button>
+            <button onclick="incrementBid(25)" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-3 rounded-lg border border-slate-700 text-sm transition">+ ₹25</button>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <label class="block text-xs font-medium text-slate-400">Custom Bid Amount (₹/kg)</label>
+            <div class="flex gap-2">
+              <input type="number" id="customBidInput" placeholder="2455" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none" />
+              <button onclick="submitCustomBid()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2 rounded-lg text-sm transition">Submit</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIVE AUDIT & BID FEED -->
+        <div class="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-xl flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>📡</span> Live Auction Log
+            </h3>
+            <span class="text-[11px] text-emerald-400 bg-emerald-950 border border-emerald-800 px-2.5 py-0.5 rounded-full">● Supabase Realtime Active</span>
+          </div>
+
+          <div id="bidHistoryLog" class="space-y-2 max-h-64 overflow-y-auto pr-2 text-xs font-mono">
+            <div class="p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+              <span class="text-slate-400">14:22:01</span>
+              <span class="text-amber-400 font-bold">🪑 T-15 (Kerala Spice Traders)</span>
+              <span class="text-emerald-400 font-bold text-sm">₹2,450/kg</span>
+            </div>
+            <div class="p-2 rounded bg-slate-900/40 border border-slate-800/50 flex justify-between items-center">
+              <span class="text-slate-400">14:21:58</span>
+              <span class="text-slate-300">🪑 T-04 (Highrange Spices)</span>
+              <span class="text-slate-200">₹2,425/kg</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // POPULATE SEATS T-01 TO T-60
+    const seatSelect = document.getElementById('loginSeat');
+    for (let i = 1; i <= 60; i++) {
+      const seatNum = 'T-' + String(i).padStart(2, '0');
+      const opt = document.createElement('option');
+      opt.value = seatNum;
+      opt.textContent = `🪑 Hall Table / Seat ${seatNum}`;
+      seatSelect.appendChild(opt);
+    }
+
+    let currentLocation = 'Puttady';
+    let currentUser = null;
+    let currentBid = 2450;
+    let timerVal = 6;
+    let timerInterval = null;
+
+    function switchLocation(loc) {
+      currentLocation = loc;
+      document.getElementById('locPuttady').className = loc === 'Puttady' 
+        ? 'px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition'
+        : 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition';
+      document.getElementById('locBodi').className = loc === 'Bodinayakanur'
+        ? 'px-3 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition'
+        : 'px-3 py-1 rounded text-xs font-semibold text-slate-400 hover:text-white transition';
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('loginUsername').value;
+      const pass = document.getElementById('loginPassword').value;
+      const seat = document.getElementById('loginSeat').value;
+
+      // Universal Password bypass '1234'
+      if (pass === '1234' || pass.length >= 4) {
+        currentUser = { name: user, role: 'Trader', seat: seat };
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('auctionDashboard').classList.remove('hidden');
+        document.getElementById('userBadge').classList.remove('hidden');
+        document.getElementById('userBadge').classList.add('flex');
+        document.getElementById('userNameBadge').textContent = user;
+        document.getElementById('userSeatBadge').textContent = '🪑 ' + seat;
+        startTimer();
+      } else {
+        alert('Invalid credentials');
+      }
+    }
+
+    function quickLogin(username, role) {
+      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginPassword').value = '1234';
+      handleLogin({ preventDefault: () => {} });
+    }
+
+    function logout() {
+      clearInterval(timerInterval);
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('auctionDashboard').classList.add('hidden');
+      document.getElementById('userBadge').classList.add('hidden');
+      document.getElementById('userBadge').classList.remove('flex');
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerVal = 6;
+      document.getElementById('bidTimer').textContent = '06s';
+      timerInterval = setInterval(() => {
+        timerVal--;
+        document.getElementById('bidTimer').textContent = '0' + timerVal + 's';
+        if (timerVal <= 0) {
+          timerVal = 6; // Auto rerun
+        }
+      }, 1000);
+    }
+
+    function incrementBid(amt) {
+      currentBid += amt;
+      updateBidDisplay();
+    }
+
+    function submitCustomBid() {
+      const val = parseInt(document.getElementById('customBidInput').value);
+      if (val > currentBid) {
+        currentBid = val;
+        updateBidDisplay();
+      } else {
+        alert('Bid must be higher than current price ₹' + currentBid);
+      }
+    }
+
+    function updateBidDisplay() {
+      document.getElementById('highestBidDisplay').textContent = '₹ ' + currentBid.toLocaleString() + ' / kg';
+      document.getElementById('highestBidderInfo').innerHTML = `<span>Holder: <strong class="text-white">${currentUser.name}</strong></span><span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">🪑 Table ${currentUser.seat}</span>`;
+      
+      const log = document.getElementById('bidHistoryLog');
+      const entry = document.createElement('div');
+      const timeStr = new Date().toLocaleTimeString();
+      entry.className = 'p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center';
+      entry.innerHTML = `<span class="text-slate-400">${timeStr}</span><span class="text-amber-400 font-bold">🪑 ${currentUser.seat} (${currentUser.name})</span><span class="text-emerald-400 font-bold text-sm">₹${currentBid.toLocaleString()}/kg</span>`;
+      log.prepend(entry);
+      
+      startTimer(); // Reset 6-second bid timer
+    }
+  </script>
+</body>
+</html>
