@@ -205,9 +205,8 @@
 </div>
 
 <script>
-  // 1. Supabase Initialization
+  // 1. Supabase Credentials
   const SUPABASE_URL = "https://kuzctjkuclftukoukyws.supabase.co";
-  // Paste your full anon key below:
   const SUPABASE_KEY = "YOUR_ACTUAL_SUPABASE_ANON_KEY"; 
   let supabase = null;
 
@@ -224,7 +223,7 @@
   let timerSeconds = 6;
   let timerInterval = null;
 
-  // 3. Timer Logic
+  // 3. Timer Controls
   function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -241,7 +240,7 @@
     startTimer();
   }
 
-  // 4. Auctioneer Controls
+  // 4. Auctioneer Handlers
   function handlePauseTimer() {
     clearInterval(timerInterval);
     addStreamLog('⚠️ Auction timer paused by Auctioneer.');
@@ -268,7 +267,7 @@
     addStreamLog(`➡️ Advanced to LOT #${currentLot}`);
   }
 
-  // 5. Bidding & Database Insertion
+  // 5. Bidding Logic & DB Insertion
   async function submitBid(increment) {
     currentBid += increment;
     currentHighestBidder = `trader@puttady (${currentSeat})`;
@@ -290,7 +289,7 @@
           location: currentLocation
         }]);
       } catch (err) {
-        console.log('Supabase sync notice:', err);
+        console.log('Supabase Sync:', err);
       }
     }
   }
