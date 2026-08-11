@@ -205,16 +205,17 @@
 </div>
 
 <script>
-  // 1. Supabase Credentials
+  // 1. Supabase Initialization
   const SUPABASE_URL = "https://kuzctjkuclftukoukyws.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1emN0amt1Y2xmdHVrb3VreXdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0MTA0NDksImV4cCI6MjA1NTk4NjQ0OX0.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // Put your full anon key here
+  // Paste your full anon key below:
+  const SUPABASE_KEY = "YOUR_ACTUAL_SUPABASE_ANON_KEY"; 
   let supabase = null;
 
-  if (window.supabase) {
+  if (window.supabase && SUPABASE_KEY !== "YOUR_ACTUAL_SUPABASE_ANON_KEY") {
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
 
-  // 2. State
+  // 2. Application State
   let currentLot = 104;
   let currentBid = 2100;
   let currentHighestBidder = "Base Price";
@@ -223,7 +224,7 @@
   let timerSeconds = 6;
   let timerInterval = null;
 
-  // 3. Timer Control
+  // 3. Timer Logic
   function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -240,7 +241,7 @@
     startTimer();
   }
 
-  // 4. Auctioneer Handlers
+  // 4. Auctioneer Controls
   function handlePauseTimer() {
     clearInterval(timerInterval);
     addStreamLog('⚠️ Auction timer paused by Auctioneer.');
@@ -267,7 +268,7 @@
     addStreamLog(`➡️ Advanced to LOT #${currentLot}`);
   }
 
-  // 5. Bidding & Database Sync
+  // 5. Bidding & Database Insertion
   async function submitBid(increment) {
     currentBid += increment;
     currentHighestBidder = `trader@puttady (${currentSeat})`;
@@ -288,8 +289,8 @@
           bid_amount: currentBid,
           location: currentLocation
         }]);
-      } catch (e) {
-        console.log('Supabase Sync:', e);
+      } catch (err) {
+        console.log('Supabase sync notice:', err);
       }
     }
   }
@@ -303,7 +304,7 @@
     log.prepend(item);
   }
 
-  // 6. Seat Grid Generation
+  // 6. Interactive Seat Selection Grid (T-01 to T-60)
   function renderSeats() {
     const grid = document.getElementById('seat-grid');
     grid.innerHTML = '';
