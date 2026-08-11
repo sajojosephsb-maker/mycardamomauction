@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyCardamomAuction - Live Spice E-Auction Platform</title>
-  <!-- Supabase JS Client Library -->
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -100,13 +100,18 @@
       border-radius: 4px;
       font-size: 0.8rem;
       cursor: pointer;
+      user-select: none;
+    }
+
+    .seat-box:hover {
+      border-color: var(--accent-blue);
     }
 
     .seat-box.active {
       border-color: var(--accent-green);
       color: var(--accent-green);
-      font-weight: bold;
       background: #064e3b;
+      font-weight: bold;
     }
 
     .stream-log {
@@ -192,7 +197,7 @@
     <div>
       <div class="card">
         <h3>🪑 Terminal Seats (T-01 to T-60)</h3>
-        <p style="font-size: 0.8rem; color: var(--text-muted);">Click any seat box to switch active trading seat.</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Click any seat box to switch active trading terminal.</p>
         <div class="seat-grid" id="seat-grid"></div>
       </div>
     </div>
@@ -202,10 +207,14 @@
 <script>
   // 1. Supabase Credentials
   const SUPABASE_URL = "https://kuzctjkuclftukoukyws.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1emN0amt1Y2xmdHVrb3VreXdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0MTA0NDksImV4cCI6MjA1NTk4NjQ0OX0.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1emN0amt1Y2xmdHVrb3VreXdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0MTA0NDksImV4cCI6MjA1NTk4NjQ0OX0.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // Put your full anon key here
+  let supabase = null;
 
-  // 2. Application State
+  if (window.supabase) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+
+  // 2. State
   let currentLot = 104;
   let currentBid = 2100;
   let currentHighestBidder = "Base Price";
@@ -214,7 +223,7 @@
   let timerSeconds = 6;
   let timerInterval = null;
 
-  // 3. Timer Implementation
+  // 3. Timer Control
   function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -231,7 +240,7 @@
     startTimer();
   }
 
-  // 4. Auctioneer Controls
+  // 4. Auctioneer Handlers
   function handlePauseTimer() {
     clearInterval(timerInterval);
     addStreamLog('⚠️ Auction timer paused by Auctioneer.');
@@ -245,7 +254,6 @@
   function handleHammerSale() {
     clearInterval(timerInterval);
     addStreamLog(`🔨 HAMMER SALE! Lot #${currentLot} SOLD to ${currentHighestBidder} at ₹${currentBid}/kg!`);
-    alert(`HAMMER SALE! Lot #${currentLot} SOLD to ${currentHighestBidder} at ₹${currentBid}/kg!`);
   }
 
   function handleNextLot() {
@@ -259,7 +267,7 @@
     addStreamLog(`➡️ Advanced to LOT #${currentLot}`);
   }
 
-  // 5. Submit Bids to UI & Supabase
+  // 5. Bidding & Database Sync
   async function submitBid(increment) {
     currentBid += increment;
     currentHighestBidder = `trader@puttady (${currentSeat})`;
@@ -268,19 +276,21 @@
     document.getElementById('highest-bidder-display').innerText = `Holder: ${currentHighestBidder}`;
     resetTimer();
 
-    const logText = `₹${currentBid}/kg placed by ${currentSeat} at ${currentLocation}`;
-    addStreamLog(logText);
+    const msg = `₹${currentBid}/kg placed by ${currentSeat} at ${currentLocation}`;
+    addStreamLog(msg);
 
-    try {
-      await supabase.from('bids').insert([{
-        lot_number: currentLot,
-        username: 'trader@puttady',
-        seat: currentSeat,
-        bid_amount: currentBid,
-        location: currentLocation
-      }]);
-    } catch (err) {
-      console.log('Database Log Notice:', err);
+    if (supabase) {
+      try {
+        await supabase.from('bids').insert([{
+          lot_number: currentLot,
+          username: 'trader@puttady',
+          seat: currentSeat,
+          bid_amount: currentBid,
+          location: currentLocation
+        }]);
+      } catch (e) {
+        console.log('Supabase Sync:', e);
+      }
     }
   }
 
@@ -293,17 +303,17 @@
     log.prepend(item);
   }
 
-  // 6. Interactive Seat Selection (T-01 to T-60)
+  // 6. Seat Grid Generation
   function renderSeats() {
     const grid = document.getElementById('seat-grid');
     grid.innerHTML = '';
     for (let i = 1; i <= 60; i++) {
-      const seatTag = `T-${i < 10 ? '0' + i : i}`;
+      const tag = `T-${i < 10 ? '0' + i : i}`;
       const box = document.createElement('div');
-      box.className = `seat-box ${seatTag === currentSeat ? 'active' : ''}`;
-      box.innerText = seatTag;
+      box.className = `seat-box ${tag === currentSeat ? 'active' : ''}`;
+      box.innerText = tag;
       box.onclick = () => {
-        currentSeat = seatTag;
+        currentSeat = tag;
         document.getElementById('user-display').innerText = `👤 Trader (🪑 ${currentSeat})`;
         renderSeats();
       };
